@@ -1,0 +1,29 @@
+{
+  "_comment": "最小可用动作注册表示例：两个动作，演示 server/phone 双面定义。",
+  "schema": 1,
+  "actions": [
+    {
+      "action": "clipboard.get",
+      "doc": "读手机剪贴板并回传",
+      "server": { "params": {} },
+      "phone": {
+        "handler": "clipboard_get",
+        "receipt": { "onSuccess": "succeeded" }
+      }
+    },
+    {
+      "action": "notify",
+      "doc": "弹一条手机通知",
+      "server": {
+        "params": {
+          "title": { "type": "string", "required": true },
+          "body":  { "type": "string", "required": false }
+        }
+      },
+      "phone": {
+        "handler": "notify",
+        "receipt": { "onSuccess": "succeeded" }
+      }
+    }
+  ]
+}

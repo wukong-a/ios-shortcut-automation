@@ -1,0 +1,27 @@
+# 密钥 / 证书（绝不入库）
+certs/
+*.key
+*.key.bin
+key.bin
+auth.plist
+*.p12
+*.mobileconfig
+
+# 令牌 / 环境
+.env
+*.token
+token.txt
+phone-token.txt
+auth.json
+
+# 构建产物
+out/
+*.shortcut
+*.zip
+
+# 系统
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+venv/

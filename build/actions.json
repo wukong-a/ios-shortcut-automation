@@ -1,0 +1,646 @@
+{
+  "_comment": "单一真相源：ShortcutPull 动作注册表。server 校验（taskqueue ACTIONS）与手机实现（快捷指令分支）都由本文件生成，禁止手工改 server.mjs 的 ACTIONS 或 gen_pull_v*.py 的 BRANCHES。",
+  "schema": 1,
+  "provenance": {
+    "base": "gen_pull_v13.py（2026-10-14，主人实测跑通）",
+    "note": "phone 节点是从 v13 实测产物逐节点抄录，非臆造；改动需在手机上回归验证。"
+  },
+  "defaults": {
+    "timeoutSeconds": 3600,
+    "receipt": {
+      "onSuccess": "succeeded"
+    }
+  },
+  "actions": [
+    {
+      "action": "clipboard.get",
+      "doc": "读手机剪贴板",
+      "server": {
+        "params": {}
+      },
+      "phone": {
+        "handler": "clipboard_get",
+        "receipt": {
+          "onSuccess": "succeeded"
+        }
+      }
+    },
+    {
+      "action": "clipboard.set",
+      "doc": "写手机剪贴板",
+      "server": {
+        "params": {
+          "text": {
+            "type": "string",
+            "required": true,
+            "max": 200000
+          }
+        }
+      },
+      "phone": {
+        "handler": "clipboard_set"
+      }
+    },
+    {
+      "action": "battery.get",
+      "doc": "读电量",
+      "server": {
+        "params": {}
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "getbatterylevel"
+          }
+        ],
+        "receipt": {
+          "onSuccess": "succeeded",
+          "resultRef": "$prev"
+        }
+      }
+    },
+    {
+      "action": "currentapp.get",
+      "doc": "当前前台 App",
+      "server": {
+        "params": {}
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "getcurrentapp"
+          }
+        ],
+        "receipt": {
+          "onSuccess": "succeeded",
+          "resultRef": "$prev"
+        }
+      }
+    },
+    {
+      "action": "location.get",
+      "doc": "当前位置",
+      "server": {
+        "params": {}
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "getcurrentlocation"
+          }
+        ],
+        "receipt": {
+          "onSuccess": "succeeded",
+          "resultRef": "$prev"
+        }
+      }
+    },
+    {
+      "action": "reminder.add",
+      "doc": "建提醒（列表「任务」）。不支持截止时间：服务端已撤掉 due（WFAlertCustomTime 只吃相对偏移，ISO 落地不了，详见 build/README）。",
+      "server": {
+        "params": {
+          "title": {
+            "type": "string",
+            "required": true,
+            "min": 1,
+            "max": 200
+          },
+          "notes": {
+            "type": "string",
+            "max": 2000
+          },
+          "list": {
+            "type": "string",
+            "max": 100
+          }
+        }
+      },
+      "phone": {
+        "handler": "reminder_add"
+      }
+    },
+    {
+      "action": "calendar.add",
+      "doc": "建日程",
+      "server": {
+        "params": {
+          "title": {
+            "type": "string",
+            "required": true,
+            "min": 1,
+            "max": 200
+          },
+          "start": {
+            "type": "string",
+            "required": true,
+            "max": 64,
+            "iso": true
+          },
+          "end": {
+            "type": "string",
+            "max": 64,
+            "iso": true
+          },
+          "location": {
+            "type": "string",
+            "max": 200
+          },
+          "notes": {
+            "type": "string",
+            "max": 2000
+          }
+        }
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "addnewevent",
+            "params": {
+              "WFCalendarItemTitle": {
+                "param": "title"
+              },
+              "WFCalendarItemLocation": {
+                "param": "location"
+              },
+              "WFCalendarItemStartDate": {
+                "param": "start"
+              },
+              "WFCalendarItemEndDate": {
+                "param": "end"
+              },
+              "WFCalendarItemNotes": {
+                "param": "notes"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "action": "note.append",
+      "doc": "追加到备忘录。entity=目标备忘录名，text=追加内容。",
+      "server": {
+        "params": {
+          "note": {
+            "type": "string",
+            "required": true,
+            "min": 1,
+            "max": 200
+          },
+          "text": {
+            "type": "string",
+            "required": true,
+            "min": 1,
+            "max": 4000
+          }
+        }
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "appendnote",
+            "params": {
+              "operation": {
+                "const": "append"
+              },
+              "entity": {
+                "param": "note"
+              },
+              "text": {
+                "param": "text"
+              }
+            }
+          }
+        ],
+        "needsDeviceCheck": "操作名/参数键取自 shortcutkit 注册表（operation 取值为 append / prepend），但 v13 从未实现过该分支，手机端真机未验证。"
+      }
+    },
+    {
+      "action": "notify",
+      "doc": "弹手机通知",
+      "server": {
+        "params": {
+          "title": {
+            "type": "string",
+            "max": 200
+          },
+          "body": {
+            "type": "string",
+            "max": 4000
+          }
+        }
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "notification",
+            "params": {
+              "WFNotificationActionTitle": {
+                "param": "title"
+              },
+              "WFNotificationActionBody": {
+                "param": "body"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "action": "openurl",
+      "doc": "打开链接 / App scheme（会打断后续动作，回执在它之前发）",
+      "server": {
+        "params": {
+          "url": {
+            "type": "string",
+            "required": true,
+            "max": 2000
+          }
+        }
+      },
+      "phone": {
+        "receiptFirst": true,
+        "steps": [
+          {
+            "op": "openurl",
+            "input": {
+              "param": "url"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "action": "speak",
+      "doc": "手机朗读",
+      "server": {
+        "params": {
+          "text": {
+            "type": "string",
+            "required": true,
+            "max": 1000
+          }
+        }
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "speaktext",
+            "params": {
+              "WFText": {
+                "param": "text"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "action": "vibrate",
+      "doc": "手机振动",
+      "server": {
+        "params": {}
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "vibrate"
+          }
+        ]
+      }
+    },
+    {
+      "action": "alert",
+      "doc": "弹对话框",
+      "server": {
+        "params": {
+          "title": {
+            "type": "string",
+            "max": 200
+          },
+          "message": {
+            "type": "string",
+            "max": 2000
+          }
+        }
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "alert",
+            "params": {
+              "WFAlertActionTitle": {
+                "param": "title"
+              },
+              "WFAlertActionMessage": {
+                "param": "message"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "action": "openapp",
+      "doc": "打开 App",
+      "server": {
+        "params": {
+          "name": {
+            "type": "string",
+            "required": true,
+            "max": 200
+          }
+        }
+      },
+      "phone": {
+        "receiptFirst": true,
+        "steps": [
+          {
+            "op": "openapp",
+            "params": {
+              "WFAppName": {
+                "param": "name"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "action": "shortcut.run",
+      "doc": "触发任意快捷指令（名字驱动，支持中文/URL 编码）",
+      "server": {
+        "requiresIdempotencyKey": true,
+        "params": {
+          "name": {
+            "type": "string",
+            "required": true,
+            "whitelistShortcuts": true
+          },
+          "input": {
+            "type": "string",
+            "max": 4000
+          }
+        }
+      },
+      "phone": {
+        "handler": "shortcut_run"
+      }
+    },
+    {
+      "action": "shortcuts.list",
+      "doc": "列出手机全部快捷指令名",
+      "server": {
+        "params": {}
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "getmyworkflows"
+          }
+        ],
+        "receipt": {
+          "onSuccess": "succeeded",
+          "resultRef": "$prev"
+        }
+      }
+    },
+    {
+      "action": "ask",
+      "doc": "弹框问输入",
+      "server": {
+        "params": {
+          "inputType": {
+            "type": "string",
+            "max": 40
+          }
+        }
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "ask",
+            "params": {
+              "WFInputType": {
+                "param": "inputType"
+              }
+            }
+          }
+        ],
+        "receipt": {
+          "onSuccess": "succeeded",
+          "resultRef": "$prev"
+        }
+      }
+    },
+    {
+      "action": "photo.latest",
+      "doc": "取最新照片 → 上传 NAS",
+      "server": {
+        "params": {}
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "getlastphoto",
+            "params": {
+              "WFGetLatestPhotoCount": {
+                "const": 1
+              },
+              "WFGetLatestPhotosActionIncludeScreenshots": {
+                "const": false
+              }
+            }
+          },
+          {
+            "op": "upload",
+            "filename": "photo.jpg"
+          }
+        ]
+      }
+    },
+    {
+      "action": "photo.take",
+      "doc": "拍照 → 上传 NAS",
+      "server": {
+        "params": {}
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "takephoto",
+            "params": {
+              "WFCameraCaptureShowPreview": {
+                "const": false
+              },
+              "WFPhotoCount": {
+                "const": 1
+              },
+              "WFCameraCaptureDevice": {
+                "const": "Back"
+              }
+            }
+          },
+          {
+            "op": "upload",
+            "filename": "photo.jpg"
+          }
+        ]
+      }
+    },
+    {
+      "action": "screenshot",
+      "doc": "截图 → 上传 NAS",
+      "server": {
+        "params": {}
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "takescreenshot"
+          },
+          {
+            "op": "upload",
+            "filename": "screenshot.png"
+          }
+        ]
+      }
+    },
+    {
+      "action": "brightness.set",
+      "doc": "设亮度",
+      "server": {
+        "params": {
+          "level": {
+            "type": "string",
+            "required": true,
+            "max": 8
+          }
+        }
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "setbrightness",
+            "params": {
+              "WFBrightness": {
+                "param": "level"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "action": "volume.set",
+      "doc": "设媒体音量",
+      "server": {
+        "params": {
+          "level": {
+            "type": "string",
+            "required": true,
+            "max": 8
+          }
+        }
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "setvolume",
+            "params": {
+              "WFVolumeSetting": {
+                "const": "Media"
+              },
+              "WFVolume": {
+                "param": "level"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "action": "lowpower",
+      "doc": "低电量模式。mode=on/off/set/toggle（默认 toggle）。",
+      "server": {
+        "params": {
+          "mode": {
+            "type": "string",
+            "max": 10
+          }
+        }
+      },
+      "phone": {
+        "handler": "lowpower"
+      }
+    },
+    {
+      "action": "script.run",
+      "doc": "跑 Scriptable 里的 JS 脚本",
+      "server": {
+        "params": {
+          "name": {
+            "type": "string",
+            "required": true,
+            "max": 200
+          }
+        }
+      },
+      "phone": {
+        "handler": "script_run"
+      }
+    },
+    {
+      "action": "dictate",
+      "doc": "语音输入转文字",
+      "server": {
+        "params": {}
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "dictatetext"
+          }
+        ],
+        "receipt": {
+          "onSuccess": "succeeded",
+          "resultRef": "$prev"
+        }
+      }
+    },
+    {
+      "action": "sms.send",
+      "doc": "发短信/iMessage",
+      "server": {
+        "params": {
+          "to": {
+            "type": "string",
+            "required": true,
+            "max": 64
+          },
+          "text": {
+            "type": "string",
+            "required": true,
+            "max": 2000
+          }
+        }
+      },
+      "phone": {
+        "steps": [
+          {
+            "op": "sendmessage",
+            "params": {
+              "WFSendMessageActionRecipients": {
+                "param": "to"
+              },
+              "WFSendMessageContent": {
+                "param": "text"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

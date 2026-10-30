@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>iOS 快捷指令自动化 · 思维导图</title>
+<style>
+:root{--bg:#0f1115;--fg:#e6e8ee;--dim:#8b93a7;--line:#2a2f3a;
+--c1:#4f8cff;--c2:#38c98d;--c3:#f2b544;--c4:#e2685f;--c5:#b06bff;--c6:#3fb8c9;--c7:#e782b0;--c8:#7a8494}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;overflow:hidden}
+#wrap{position:fixed;inset:0;cursor:grab}
+#wrap.drag{cursor:grabbing}
+#stage{transform-origin:0 0;will-change:transform}
+.node{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;
+padding:5px 12px;border-radius:9px;background:#1a1e27;border:1px solid var(--line);
+font-size:12.5px}
+.node.root{font-size:17px;font-weight:700;padding:10px 22px;border-radius:14px;
+background:linear-gradient(135deg,#2b3a63,#1c2333);border-color:#41598f}
+.node.lv1{font-size:14px;font-weight:600;padding:7px 16px;border-radius:11px;background:#232936}
+.node.lv2{font-size:12px;color:#cfd5e2}
+.node.dim{color:var(--dim)}
+#hud{position:fixed;left:16px;top:14px;font-size:12px;color:var(--dim);pointer-events:none;line-height:1.8}
+#hud b{color:var(--fg);font-size:15px}
+#btns{position:fixed;right:16px;top:14px;display:flex;gap:8px}
+#btns button{background:#1a1e27;color:var(--fg);border:1px solid var(--line);
+border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer}
+#btns button:hover{border-color:#41598f}
+</style></head><body>
+<div id="hud"><b>iOS 快捷指令自动化</b><br>滚轮缩放 · 拖动平移 · 点击节点收起/展开</div>
+<div id="btns"><button onclick="fit()">适应屏幕</button><button onclick="reset()">重置</button></div>
+<div id="wrap"><div id="stage"><svg id="svg"></svg></div></div>
+<script>
+const DATA = {"label": "iOS Shortcut Automation v1", "children": [{"label": "动作注册表 · 26 项", "children": [{"label": "读取手机状态 · 5", "children": [{"label": "clipboard.get"}, {"label": "battery.get"}, {"label": "currentapp.get"}, {"label": "location.get"}, {"label": "shortcuts.list"}]}, {"label": "写入 / 控制手机 · 10", "children": [{"label": "clipboard.set"}, {"label": "notify"}, {"label": "speak"}, {"label": "vibrate"}, {"label": "alert"}, {"label": "brightness.set"}, {"label": "volume.set"}, {"label": "lowpower"}, {"label": "openurl"}, {"label": "openapp"}]}, {"label": "内容采集上传 · 3", "children": [{"label": "photo.latest"}, {"label": "photo.take"}, {"label": "screenshot"}]}, {"label": "系统应用写入 · 4", "children": [{"label": "reminder.add"}, {"label": "calendar.add"}, {"label": "note.append"}, {"label": "sms.send"}]}, {"label": "调用外部能力 · 4", "children": [{"label": "shortcut.run"}, {"label": "script.run"}, {"label": "dictate"}, {"label": "ask"}]}]}, {"label": "快捷指令分类 · 12 项示例", "children": [{"label": "可无人值守 · 4", "children": [{"label": "读剪贴板"}, {"label": "查电量"}, {"label": "当前前台 App"}, {"label": "上传剪贴板到 NAS"}]}, {"label": "需要文本/URL 输入 · 2", "children": [{"label": "向大模型提问"}, {"label": "商品比价查询"}]}, {"label": "需要选择照片/视频 · 2", "children": [{"label": "加水印"}, {"label": "九宫格切图"}]}, {"label": "需要外部 App / 人工确认 · 2", "children": [{"label": "签到类"}, {"label": "游戏自动化"}]}, {"label": "场景组合（会阻塞后续） · 2", "children": [{"label": "离家场景"}, {"label": "回家场景"}]}]}, {"label": "执行链路", "children": [{"label": "① 入队", "children": [{"label": "POST /tasks"}, {"label": "POST /tasks + idempotencyKey"}]}, {"label": "② 唤醒", "children": [{"label": "build/wake.py"}, {"label": "邮件自动化触发 ShortcutPull"}]}, {"label": "③ 拉取", "children": [{"label": "GET /outbox（phone token）"}, {"label": "拉取到回执约 600ms"}]}, {"label": "④ 执行", "children": [{"label": "分支派发 phone handler"}, {"label": "全链路约 55s"}]}, {"label": "⑤ 回执", "children": [{"label": "POST /receipt"}, {"label": "tasks.json 落库"}]}]}, {"label": "服务端", "children": [{"label": "server.py · 标准库", "children": [{"label": "POST /tasks 入队"}, {"label": "GET /outbox 拉取"}, {"label": "POST /receipt 回传"}, {"label": "GET /health 存活"}]}, {"label": "鉴权", "children": [{"label": "admin / phone 角色分离"}, {"label": "sha256 + 常数时间比对"}]}, {"label": "可靠性", "children": [{"label": "幂等键防重复执行"}, {"label": "ttlSeconds 过期作废"}, {"label": "MAX_ATTEMPTS 重试上限"}]}, {"label": "selftest.py · 13 项", "children": [{"label": "隔离临时目录 + 独立端口"}, {"label": "跑完即删，不碰真实数据"}]}]}, {"label": "构建体系", "children": [{"label": "真相源", "children": [{"label": "build/actions.json"}, {"label": "examples/shortcut-categories.example.json"}]}, {"label": "生成", "children": [{"label": "build_pull.py"}, {"label": "gen_health.py"}]}, {"label": "门禁", "children": [{"label": "verify_struct.py 结构"}, {"label": "verify_all.py 台账"}]}, {"label": "签名", "children": [{"label": "shortcut-sign + 自建 CA"}, {"label": "gen-ca.sh · 一条命令出证书"}, {"label": "certs/key.bin + auth.plist"}, {"label": "手机需装 CA 并开信任"}]}, {"label": "交付", "children": [{"label": "即时通讯传文件（推荐）"}, {"label": "AirDrop / 网盘"}, {"label": "静态站（可选，--publish）"}]}, {"label": "同步", "children": [{"label": "sync_server.py"}, {"label": "/srv/taskqueue/server.mjs"}]}]}]};
+const COLORS = ["#4f8cff","#38c98d","#f2b544","#e2685f","#b06bff","#3fb8c9","#e782b0","#7a8494"];
+const svg = document.getElementById('svg');
+const stage = document.getElementById('stage');
+const NS = 'http://www.w3.org/2000/svg';
+let nodes = [], collapsing = {};
+
+function el(tag, attrs, cls){
+  const e = document.createElement(tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (cls) e.setAttribute('class', cls);
+  return e;
+}
+
+function measure(text, size, bold){
+  let w = 0;
+  for (const ch of text) w += /[\u4e00-\u9fa5　-〿＀-￯]/.test(ch) ? size : size*0.55;
+  return {w: w + 26, h: size + 16};
+}
+
+function layout(){
+  const R = {x:0, y:0, root:true, label:DATA.label, depth:0};
+  R.box = measure(R.label, 17, true);
+  R.box.w += 20; R.box.h += 6;
+  const branches = DATA.children;
+  let y = 0;
+  const gapY = 34;
+  branches.forEach((b, bi) => {
+    b.depth = 1; b.color = COLORS[bi % COLORS.length];
+    b.box = measure(b.label, 14, true);
+    const kids = b.children || [];
+    let ky = 0;
+    kids.forEach(k => {
+      k.depth = 2;
+      k.box = measure(k.label, 12.5, false);
+      k.y = ky + k.box.h/2;
+      ky += k.box.h + 16;
+    });
+    const h = Math.max(b.box.h, ky);
+    b.y = y + h/2;
+    kids.forEach(k => { k.y += y; });
+    y += h + gapY;
+  });
+  const totalH = y;
+  const cy = totalH/2;
+  R.y = cy;
+  const off = R.box.w/2 + 90;
+  branches.forEach(b => {
+    b.x = off + b.box.w/2;
+    const koff = b.x + b.box.w/2 + 80;
+    (b.children||[]).forEach(k => { k.x = koff + k.box.w/2; k.y -= (totalH/2 - ky0(b)); });
+  });
+  return {root:R, branches};
+}
+function ky0(b){ return 0; }
+
+function draw(){
+  svg.innerHTML = '';
+  const L = layout();
+  L.branches.forEach(b => { b.y -= 0; });
+  const all = [L.root];
+  const emit = (n, parent) => {
+    all.push(n);
+    if(parent) n.children.forEach(c => emit(c, n));
+  };
+  emit(L.root, null);
+  // 节点
+  all.forEach(n => {
+    if (!n.children) return;
+    n.children.forEach(c => {
+      c.parent = n;
+    });
+  });
+  const rects = [];
+  const walk = (n) => {
+    rects.push(n);
+    (n.children || []).forEach(walk);
+  };
+  walk(L.root);
+  // 弧线
+  rects.forEach(n => {
+    (n.children || []).forEach(c => {
+      const x1 = n.x + (n.depth===0 ? n.box.w/2 : n.box.w/2) + 4;
+      const x2 = c.x - c.box.w/2 - 4;
+      const mx = (x1 + x2)/2;
+      const d = `M ${x1} ${n.y} C ${mx} ${n.y}, ${mx} ${c.y}, ${x2} ${c.y}`;
+      svg.appendChild(el('path', {d, fill:'none',
+        stroke: c.color || n.color || '#3a4150', 'stroke-width': 1.4, opacity: .75}));
+    });
+  });
+  // 文本
+  rects.forEach(n => {
+    const g = el('g', {});
+    const r = el('rect', {x: n.x - n.box.w/2, y: n.y - n.box.h/2,
+      width: n.box.w, height: n.box.h, rx: n.depth===0?14:n.depth===1?11:9,
+      fill: n.depth===0 ? '#232d45' : '#1a1e27',
+      stroke: n.color || (n.depth===0?'#41598f':'#2a2f3a'), 'stroke-width': n.depth===1?1.4:1});
+    const t = el('text', {x: n.x, y: n.y + (n.depth===0?6:n.depth===1?5:4.5),
+      'text-anchor':'middle',
+      fill: n.depth===2 ? '#cfd5e2' : '#e6e8ee',
+      'font-size': n.depth===0?17:n.depth===1?14:12.5,
+      'font-weight': n.depth<2?'600':'400'});
+    t.textContent = n.label;
+    g.appendChild(r); g.appendChild(t);
+    if (n.depth === 1) {
+      g.style.cursor = 'pointer';
+      g.addEventListener('click', e => {
+        e.stopPropagation();
+        n.folded = !n.folded;
+        n.children.forEach(c => { c.hidden = n.folded; });
+      });
+    }
+    svg.appendChild(g);
+  });
+  window.__all = rects;
+  fit();
+}
+
+let t = {x:0,y:0,s:1};
+function apply(){
+  stage.style.transform = `translate(${t.x}px,${t.y}px) scale(${t.s})`;
+}
+function fit(){
+  const all = window.__all || [];
+  if(!all.length) return;
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  all.forEach(n=>{
+    x0=Math.min(x0,n.x-n.box.w/2); x1=Math.max(x1,n.x+n.box.w/2);
+    y0=Math.min(y0,n.y-n.box.h/2); y1=Math.max(y1,n.y+n.box.h/2);
+  });
+  const pad = 70;
+  const vw = innerWidth, vh = innerHeight;
+  const s = Math.min((vw-pad*2)/(x1-x0), (vh-pad*2)/(y1-y0), 1.35);
+  t.s = s;
+  t.x = (vw - (x1-x0)*s)/2 - x0*s;
+  t.y = (vh - (y1-y0)*s)/2 - y0*s;
+  apply();
+}
+function reset(){ t={x:0,y:0,s:1}; apply(); fit(); }
+
+const wrap = document.getElementById('wrap');
+let dragging=false, sx=0, sy=0;
+wrap.addEventListener('mousedown', e=>{dragging=true;sx=e.clientX-t.x;sy=e.clientY-t.y;wrap.classList.add('drag');});
+addEventListener('mousemove', e=>{if(!dragging)return;t.x=e.clientX-sx;t.y=e.clientY-sy;apply();});
+addEventListener('mouseup', ()=>{dragging=false;wrap.classList.remove('drag');});
+wrap.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const k = e.deltaY < 0 ? 1.12 : 1/1.12;
+  const ns = Math.min(Math.max(t.s*k, .15), 4);
+  const mx = e.clientX, my = e.clientY;
+  t.x = mx - (mx - t.x) * (ns/t.s);
+  t.y = my - (my - t.y) * (ns/t.s);
+  t.s = ns; apply();
+}, {passive:false});
+draw();
+addEventListener('resize', fit);
+</script></body></html>
